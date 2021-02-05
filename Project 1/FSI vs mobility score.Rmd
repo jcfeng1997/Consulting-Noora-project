@@ -1,0 +1,65 @@
+---
+title: "Fragile State Index vs Mobility Score"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(shape)
+library(knitr)
+library(kableExtra)
+library(WDI)
+library(rstanarm)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Read the data
+fsi_18 <- read.csv("fsi-2018.csv")
+ms_19 <- read.csv("global_ranking_2019.tab")
+
+# Update country names
+fsi_18$Country[fsi_18$Country=="Brunei Darussalam"] <- "Brunei"
+fsi_18$Country[fsi_18$Country=="Congo Democratic Republic"] <- "Congo (Dem. Rep.)"
+fsi_18$Country[fsi_18$Country=="Congo Republic"] <- "Congo (Rep.)"
+fsi_18$Country[fsi_18$Country=="Cote d'Ivoire"] <- "Cote d'Ivoire (Ivory Coast)"
+fsi_18$Country[fsi_18$Country=="Guinea Bissau"] <- "Guinea-Bissau	"
+fsi_18$Country[fsi_18$Country=="Israel and West Bank"] <- "Israel"
+fsi_18$Country[fsi_18$Country=="Kyrgyz Republic"] <- "Kyrgyzstan"
+fsi_18$Country[fsi_18$Country=="Lao PDR"] <- "Laos"
+fsi_18$Country[fsi_18$Country=="Russia"] <- "Russian Federation"
+fsi_18$Country[fsi_18$Country=="Timor-Leste"] <- "Timor Leste"
+fsi_18$Country[fsi_18$Country=="Cape Verde"] <- "Cape Verde Islands"
+fsi_18$Country[fsi_18$Country=="Comoros"] <- "Comores Islands"
+fsi_18$Country[fsi_18$Country=="Slovak Republic"] <- "Slovakia"
+fsi_18$Country[fsi_18$Country=="Timor Leste"] <- "Timor-Leste"
+
+
+
+# data cleaning 
+fsi_data <- filter(fsi_18,Year==2018) %>% 
+  select(Country,Year,Total)
+fsi_data$Country <- str_c(fsi_data$Country,' ')
+
+ms_19 <- rename(ms_19,Country=country)
+
+# Merge two dataset
+dat_18 <- merge(fsi_data,ms_19,all=T) 
+
+# Linear regression
+fit_18 <-lm(access~Total,data = dat_18)
+summary(fit_18)
+
+# Plot
+plot(dat_18$Total,dat_18$access,pch = 20, col = 'gray60',main = 'Fragile State Index vs Mobility Score',ylab = "Mobility Score(2019)", xlab = "Fragile State Index(2018)")
+abline(coef(fit_18[1]),coef(fit_18[2]), col = 'red', lty = 2, lwd = 1.3)
+
+
+```
+
