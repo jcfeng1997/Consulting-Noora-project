@@ -1,0 +1,284 @@
+---
+title: "EDA"
+author: "Group2"
+date: "2/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(dplyr)
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(ggrepel)
+library(ggforce)
+library(corrplot)
+```
+
+## Data Cleaning
+```{r, eval=FALSE}
+top40 <- read_excel("Mini case studies top 40 edit.xlsx", 
+                    sheet = "Sheet1")
+HPI <- read.csv(file="global_ranking_2019.tab", header=T)
+
+top40$Country <- str_c(top40$Country,' ')
+
+top40 %>% inner_join(HPI,by=c("Country" = "country"))
+df <- top40 %>% left_join(HPI, by = c("Country" = "country"))
+
+colnames(df)[3] <- "development_level"
+colnames(df)[4] <- "population"
+colnames(df)[5] <- "territory"
+colnames(df)[6] <- "world_region"
+colnames(df)[7] <- "dominant_religion"
+colnames(df)[8] <- "freedom_house_ranking"
+
+df <- df[-c(39:43),]
+
+
+df %<>% separate(population, c("population", "e1"), sep = "[(]" )
+df %<>% select(-e1)
+df %<>% separate(territory, c("territory", "f1"), sep = "[ ]" )
+df %<>% select(-f1)
+
+df$population <- str_trim(df$population, side = c("both", "left", "right"))
+df$territory <- str_trim(df$territory, side = c("both", "left", "right"))
+df$territory <- str_replace(df$territory, ",","")
+df$population <- str_replace(df$population, ",","")
+
+df$territory <- str_replace(df$territory, ",","")
+df$population <- str_replace(df$population, ",","")
+
+df$territory <- as.numeric(df$territory)
+df$population <- as.numeric(df$population)
+
+write.csv(df, "df.csv")
+```
+
+```{r}
+df<-read.csv(file="df.csv",header = T)
+df$continent <-  c("Asia", "Asia", "Europe", "Africa", "Africa","Europe", "Europe","South America", "Europe", "Europe", "South America", "North America", "North America","Europe", "North America","Oceania", "North America","North America","North America","Asia", "Oceania", "North America", "Europe","Oceania", "North America","North America", "Asia", "Oceania", "Europe","Oceania","Oceania","Europe","Oceania", "Europe", "Europe","Europe", "Asia", "NA")
+
+df$log_p <- log(df$population)
+df$world_region <- as.factor(df$world_region)
+df <- na.omit(df)
+```
+
+```{r}
+# merge fsi, gni and mobility score table
+fsi_18<-read.csv(file="fsi-2018.csv",header = T)
+GNI<-read.csv(file="GNI.csv",header = T)
+
+# Update country names
+fsi_18$Country[fsi_18$Country=="Brunei Darussalam"] <- "Brunei"
+fsi_18$Country[fsi_18$Country=="Congo Democratic Republic"] <- "Congo (Dem. Rep.)"
+fsi_18$Country[fsi_18$Country=="Congo Republic"] <- "Congo (Rep.)"
+fsi_18$Country[fsi_18$Country=="Cote d'Ivoire"] <- "Cote d'Ivoire (Ivory Coast)"
+fsi_18$Country[fsi_18$Country=="Guinea Bissau"] <- "Guinea-Bissau	"
+fsi_18$Country[fsi_18$Country=="Israel and West Bank"] <- "Israel"
+fsi_18$Country[fsi_18$Country=="Kyrgyz Republic"] <- "Kyrgyzstan"
+fsi_18$Country[fsi_18$Country=="Lao PDR"] <- "Laos"
+fsi_18$Country[fsi_18$Country=="Russia"] <- "Russian Federation"
+fsi_18$Country[fsi_18$Country=="Timor-Leste"] <- "Timor Leste"
+fsi_18$Country[fsi_18$Country=="Cape Verde"] <- "Cape Verde Islands"
+fsi_18$Country[fsi_18$Country=="Comoros"] <- "Comores Islands"
+fsi_18$Country[fsi_18$Country=="Slovak Republic"] <- "Slovakia"
+fsi_18$Country[fsi_18$Country=="Timor Leste"] <- "Timor-Leste"
+
+GNI$country[GNI$country=="Bahamas, The"] <- "Bahamas"
+GNI$country[GNI$country=="Brunei Darussalam"] <- "Brunei"
+GNI$country[GNI$country=="Cabo Verde"] <- "Cape Verde"
+GNI$country[GNI$country=="Congo, Dem. Rep."] <- "Congo (Dem. Rep.)"
+GNI$country[GNI$country=="Congo, Rep."] <- "Congo (Rep.)"
+GNI$country[GNI$country=="Cote d'Ivoire"] <- "Cote d'Ivoire (Ivory Coast)"
+GNI$country[GNI$country=="Egypt, Arab Rep."] <- "Egypt"
+GNI$country[GNI$country=="Eswatini"] <- "eSwatini"
+GNI$country[GNI$country=="Gambia, The"] <- "Gambia"
+GNI$country[GNI$country=="Hong Kong SAR, China"] <- "Hong Kong (SAR China)"
+GNI$country[GNI$country=="Iran, Islamic Rep."] <- "Iran"
+GNI$country[GNI$country=="Kyrgyz Republic"] <- "Kyrgyzstan"
+GNI$country[GNI$country=="Lao PDR"] <- "Laos"
+GNI$country[GNI$country=="Macao SAR, China"] <- "Macao (SAR China)"
+GNI$country[GNI$country=="Micronesia, Fed. Sts."] <- "Micronesia"
+GNI$country[GNI$country=="Korea, Dem. People’s Rep."] <- "North Korea"
+GNI$country[GNI$country=="Slovak Republic"] <- "Slovakia"
+GNI$country[GNI$country=="Korea, Rep."] <- "South Korea"
+GNI$country[GNI$country=="Syrian Arab Republic"] <- "Syria"
+GNI$country[GNI$country=="Timor-Leste"] <- "Timor Leste"
+GNI$country[GNI$country=="Venezuela, RB"] <- "Venezuela"
+GNI$country[GNI$country=="Yemen, Rep."] <- "Yemen"
+
+
+# data cleaning 
+fsi_data <- filter(fsi_18,Year==2018) %>% 
+  select(Country,Total)
+fsi_data$Country <- str_c(fsi_data$Country,' ')
+
+GNI_data <- filter(GNI,year==2018) %>% 
+  select(country,gni)
+GNI_data$country <- str_c(GNI_data$country,' ')
+
+# Merge two dataset
+df %<>% left_join(fsi_data,by=c("Country"="Country")) 
+df %<>% left_join(GNI_data,by=c("Country"="country"))
+df %<>% rename(fsi=Total,Schengen_waiver=Schengen.Visa.waiver.Y.N..date.)
+df %<>% select(-Change.in.mobility.score..2006.2019.)
+
+# replace na with mean
+df[is.na(df$fsi),"fsi"]<-round(mean(df$fsi,na.rm = T),1)
+df[is.na(df$gni),"gni"]<-round(mean(df$gni,na.rm = T),1)
+```
+
+## EDA
+### Correlation
+```{r}
+df_cor<-df %>% select(access,population,territory,fsi,gni)
+
+df_cor$access <- (df_cor$access-mean(df_cor$access))/sd(df_cor$access)
+df_cor$population <- (df_cor$population-mean(df_cor$population))/sd(df_cor$population)
+df_cor$territory <- (df_cor$territory-mean(df_cor$territory))/sd(df_cor$territory)
+df_cor$fsi <- (df_cor$fsi-mean(df_cor$fsi))/sd(df_cor$fsi)
+df_cor$gni <- (df_cor$gni-mean(df_cor$gni))/sd(df_cor$gni)
+
+correlation<-round(cor(df_cor),2)
+
+correlation<-as.matrix(correlation)
+
+corrplot(correlation,method = "color", addCoef.col = "grey", addCoefasPercent=TRUE, tl.col = "black", tl.srt = 45, tl.cex=0.8, number.cex = 0.5) 
+
+```
+
+### fsi vs mobility score
+```{r}
+ggplot(data = df, mapping = aes(x = fsi, y = access, color = continent))+
+  geom_point(size=2)+
+  labs(x="FSI",y="Mobility Score",title="FSI vs Mobility Score")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+ggplot(data = df, mapping = aes(x = fsi, y = access, color = continent,shape=continent))+
+  geom_point(size=2)+
+  geom_label_repel(aes(fill=continent),label=df$Country,fontface="bold", color="white", 
+                   box.padding=unit(0.5, "lines"), point.padding=unit(.2, "lines"), 
+                   segment.colour = "grey50",max.overlaps = 13) +
+  labs(x="FSI",y="Mobility Score",title="FSI vs Mobility Score")+
+  theme(plot.title = element_text(hjust = 0.5))
+  
+```
+
+## gni vs mobility score
+```{r}
+df$log_gni<-log(df$gni)
+ggplot(data = df, mapping = aes(x = log_gni, y = access, color = continent))+
+  geom_point(size=2)+
+  labs(x="Log(GNI)",y="Mobility Score",title="Log(GNI) vs Mobility Score")+
+  theme(plot.title = element_text(hjust = 0.5))
+  
+```
+
+```{r}
+df$log_gni<-log(df$gni)
+ggplot(data = df, mapping = aes(x = log_gni, y = access, color = continent,shape=continent))+
+  geom_point(size=2)+
+  geom_label_repel(aes(fill=continent),label=df$Country,fontface="bold", color="white", 
+                   box.padding=unit(0.5, "lines"), point.padding=unit(.2, "lines"), 
+                   segment.colour = "grey50",max.overlaps = 13) +
+  labs(x="Log(GNI)",y="Mobility Score",title="Log(GNI) vs Mobility Score")+
+  theme(plot.title = element_text(hjust = 0.5))
+  
+```
+
+### log_populatin vs mobility score
+```{r}
+#log_populatin vs mobility score
+ggplot(data = df, mapping = aes(x = log_p, y = access, color = continent,shape=continent))+
+  geom_point(color="grey", size=2)+
+  geom_label_repel(aes(fill=continent),label=df$Country,fontface="bold", color="white", 
+                   box.padding=unit(0.5, "lines"), point.padding=unit(.2, "lines"), 
+                   segment.colour = "grey50",max.overlaps = 13) +
+  labs(x="Log(population)",y="Mobility Score",title = "Log(population) vs Mobility Score")+
+  theme_classic(base_size = 14)+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+#log_populatin vs mobility score
+ggplot(data = df, mapping = aes(x = log_p, y = access, color = continent))+
+  geom_point(size=2)+
+  labs(x="Log(population)",y="Mobility Score",title = "Log(population) vs Mobility Score")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Development v.s. Ranking
+```{r}
+ggplot(df,aes(x=development_level,y=access)) + 
+  geom_violin(aes(color=development_level),fill="gray80",alpha=0.5) +
+  geom_sina(aes(color=development_level), alpha=0.25) + 
+  labs(x="Development Level",y="Mobility Score",title="Development vs  Mobility Score") +
+  theme(panel.background=element_rect(fill="ivory1"),
+        panel.grid.major=element_line(color="gray70",size=0.2),
+        panel.grid.minor=element_line(color="gray90",size=0.1),
+        plot.title = element_text(hjust=0.5)) +
+  guides(color=guide_legend(override.aes=list(size=3)))
+```
+
+### log_territory vs mobility score
+```{r}
+df$log_t <- log(df$territory)
+ggplot(data = df, mapping = aes(x = log_t, y = access, color = continent,shape=continent))+
+  geom_point(color="grey", size=2)+
+  geom_label_repel(aes(fill=continent),label=df$Country,fontface="bold", color="white", 
+                   box.padding=unit(0.5, "lines"), point.padding=unit(.2, "lines"), 
+                   segment.colour = "grey50",max.overlaps = 18) +
+  labs(title = "Log(territory) vs Mobility Score",x="Log(territory)",y="Mobility Score")+
+  theme_classic(base_size = 14)+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+df$log_t <- log(df$territory)
+ggplot(data = df, mapping = aes(x = log_t, y = access, color = continent))+
+  geom_point(size=2)+
+  labs(title = "Log(territory) vs Mobility Score",x="Log(territory)",y="Mobility Score")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### freedom_house vs mobility score
+```{r}
+ggplot(df,aes(x=freedom_house_ranking,y=access)) + 
+  geom_violin(aes(color=freedom_house_ranking),fill="gray80",alpha=0.5) +
+  geom_sina(aes(color=freedom_house_ranking), alpha=0.25) + 
+  labs(x="Freedom House Ranking",y="Mobility Score",title="Freedom House Ranking vs Mobility Score") +
+  theme(panel.background=element_rect(fill="ivory1"),
+        panel.grid.major=element_line(color="gray70",size=0.2),
+        panel.grid.minor=element_line(color="gray90",size=0.1),
+        plot.title = element_text(hjust=0.5),
+        axis.text.x = element_text(angle = 10, hjust = 0.2, vjust = 0.5)) +
+  guides(color=guide_legend(override.aes=list(size=3)))
+```
+
+### dominant religion vs mobility score
+```{r}
+ggplot(df,aes(x=dominant_religion,y=access)) + 
+  geom_violin(aes(color=dominant_religion),fill="gray80",alpha=0.5) +
+  geom_sina(aes(color=dominant_religion), alpha=0.25) + 
+  labs(x="Dominant Religion",y="Mobility Score",title="Dominant Religion vs Mobility Score") +
+  theme(panel.background=element_rect(fill="ivory1"),
+        panel.grid.major=element_line(color="gray70",size=0.2),
+        panel.grid.minor=element_line(color="gray90",size=0.1),
+        plot.title = element_text(hjust=0.5),
+        axis.text.x = element_text(angle = 45, hjust = 0.2, vjust = 0.5)) +
+  guides(color=guide_legend(override.aes=list(size=3)))
+
+```
+
+
+
+
+
+
+
+
+
