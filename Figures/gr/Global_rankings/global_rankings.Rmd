@@ -7,7 +7,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-
+library(devtools)
+install.packages("thomasp85/transformr")
 
 pacman::p_load(tidyverse,
                gganimate)
@@ -29,14 +30,14 @@ df <- do.call(rbind, allfiles.list)
 
 ```{r intro-visualization}
 #With Mean line
-df %>% 
+mean_line <- df %>% 
   ggplot(aes(x = ranking)) + 
   geom_histogram(col = "black", fill = "white") + 
   geom_vline(aes(xintercept = mean(ranking)), col = "blue", linetype = "dashed", size = 1) + 
   labs(title = "Distribution of Global Rankings", subtitle = "2006 - 2019", y = "Count", x = "Ranking")
 
 #Mean line and Density
-df %>% 
+mean_line_density <- df %>% 
   ggplot(aes(x = ranking)) + 
   geom_histogram(aes(y = ..density..), col = "black", fill = "white") + 
   geom_density(fill = "red", alpha = .2)+
@@ -44,7 +45,7 @@ df %>%
   labs(title = "Density of Global Rankings", subtitle = "2006 - 2019", y = "Count", x = "Ranking")
 
 #Still-by year
-df %>% 
+dist_by_year <- df %>% 
   ggplot(aes(x = ranking)) + 
   geom_histogram(col = "black", fill = "white") + 
   labs(title = "Distribution of Global Rankings", y = "Count", x = "Ranking") +
@@ -63,18 +64,204 @@ anim <- df %>%
 ```
 
 ```{r developing-'TS'}
+#starting with 2006
 bin.subset <- subset(df, year == 2006)
-breaks <- c(0, 20, 40, 60, 80, 100, 120)
-labels <- c("(0-20]", "(20-40]", "(40-60]", "(60-80]", "(80-100]", "(100-120]")
+breaks <- c(0, 10, 20, 30, 40, 50,  60, 70, 80, 90, 100, 110)
+labels <- c("(0-10]", 
+            "(10-20]", 
+            "(20-30]", 
+            "(30-40]", 
+            "(40-50]", 
+            "(50-60]", 
+            "(60-70]", 
+            "(70-80]", 
+            "(80-90]", 
+            "(90-100]", 
+            "(100-110]")
 
 bin.subset$group <- cut(bin.subset$ranking,
                         breaks = breaks,
                         include.lowest = TRUE,
                         right = FALSE,
                         labels = labels)
-
+#creating a grouping id
 id.var <- bin.subset[c("country", "group")]
-
 grouping.df <- merge(df, id.var, by = "country")
+
+#subsetting by given group
+subset.0.10 <- subset(grouping.df, group == "(0-10]")
+subset.10.20 <- subset(grouping.df, group == "(10-20]")
+subset.20.30 <- subset(grouping.df, group == "(20-30]")
+subset.30.40 <- subset(grouping.df, group == "(30-40]")
+subset.40.50 <- subset(grouping.df, group == "(40-50]")
+subset.50.60 <- subset(grouping.df, group == "(50-60]")
+subset.60.70 <- subset(grouping.df, group == "(60-70]")
+subset.70.80 <- subset(grouping.df, group == "(70-80]")
+subset.80.90 <- subset(grouping.df, group == "(80-90]")
+
+#plotting
+p1 <- subset.0.10 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (0-10] )", y = "Ranking", x = "Year", col = "Country")
+
+p2 <- subset.10.20 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (10-20] )", y = "Ranking", x = "Year", col = "Country")
+
+p3 <- subset.20.30 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (20-30] )", y = "Ranking", x = "Year", col = "Country")
+
+p4 <- subset.30.40 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (30-40] )", y = "Ranking", x = "Year", col = "Country")
+
+p5 <- subset.40.50 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (40-50] )", y = "Ranking", x = "Year", col = "Country")
+
+p6 <- subset.50.60 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (50-60] )", y = "Ranking", x = "Year", col = "Country")
+
+p7 <- subset.60.70 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (60-70] )", y = "Ranking", x = "Year", col = "Country")
+
+p8 <- subset.70.80 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (70-80] )", y = "Ranking", x = "Year", col = "Country")
+
+p9 <- subset.80.90 %>%
+  ggplot(aes(x = year, y = ranking, col = country, group = country)) + 
+  geom_line() + 
+  labs(title = "Change of Ranking from 2006 (2006: (80-90] )", y = "Ranking", x = "Year", col = "Country")
+
+##animating to better show difference
+
+subset.0.10.anim <- subset.0.10 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (0-10] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+
+subset.10.20.anim <- subset.10.20 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (10-20] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+
+subset.20.30.anim <- subset.20.30 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (20-30] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+
+subset.30.40.anim <- subset.30.40 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (30-40] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+
+subset.40.50.anim <- subset.40.50 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (40-50] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+
+subset.50.60.anim <- subset.50.60 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (50-60] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+
+subset.60.70.anim <- subset.60.70 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (60-70] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+
+subset.70.80.anim <- subset.70.80 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (70-80] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+
+subset.80.90.anim <- subset.80.90 %>%
+  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  #geom_point(size = 6, alpha = .5) +
+  geom_line()+
+  labs(title = "Change of Ranking from 2006 (2006: (80-90] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
+  theme(legend.position = "none") + 
+  transition_states(states = country, state_length = 10)
+```
+
+```{r animation-plot-saving}
+ggsave(mean_line, width = 16, height = 16, dpi = 300, device = "png", filename = "rankings_histogram.png")
+ggsave(mean_line_density, width = 16, height = 16, dpi = 300, device = "png", filename = "overall_density.png")
+ggsave(dist_by_year, width = 16, height = 16, dpi = 300, device = "png", filename = "rankings_distribution_by_year.png")
+
+
+ggsave(p1, width = 16, height = 16, dpi = 300, device = "png", filename = "0-10-rankings-plot.png")
+ggsave(p2, width = 16, height = 16, dpi = 300, device = "png", filename = "10-20-rankings-plot.png")
+ggsave(p3, width = 16, height = 16, dpi = 300, device = "png", filename = "20-30-rankings-plot.png")
+ggsave(p4, width = 16, height = 16, dpi = 300, device = "png", filename = "30-40-rankings-plot.png")
+ggsave(p5, width = 16, height = 16, dpi = 300, device = "png", filename = "40-50-rankings-plot.png")
+ggsave(p6, width = 16, height = 16, dpi = 300, device = "png", filename = "50-60-rankings-plot.png")
+ggsave(p7, width = 16, height = 16, dpi = 300, device = "png", filename = "60-70-rankings-plot.png")
+ggsave(p8, width = 16, height = 16, dpi = 300, device = "png", filename = "70-80-rankings-plot.png")
+ggsave(p9, width = 16, height = 16, dpi = 300, device = "png", filename = "80-90-rankings-plot.png")
+
+animate(subset.0.10.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("0-10-Rankings.gif")
+
+animate(subset.10.20.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("10-20-Rankings.gif")
+
+animate(subset.20.30.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("20-30-Rankings.gif")
+
+animate(subset.30.40.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("30-40-Rankings.gif")
+
+animate(subset.40.50.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("40-50-Rankings.gif")
+
+animate(subset.50.60.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("50-60-Rankings.gif")
+
+animate(subset.60.70.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("60-70-Rankings.gif")
+
+animate(subset.70.80.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("70-80-Rankings.gif")
+
+animate(subset.80.90.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
+anim_save("80-90-Rankings.gif")
+
 ```
 
