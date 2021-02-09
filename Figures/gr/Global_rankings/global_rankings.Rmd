@@ -11,21 +11,27 @@ library(devtools)
 install.packages("thomasp85/transformr")
 
 pacman::p_load(tidyverse,
-               gganimate)
+               gganimate,
+               data.table)
 
 ```
 
 
 ```{r data-intake}
-files <- list.files(path = "tabfolder", pattern = "*.tab", full.names = TRUE)
-allfiles.list <- lapply(files, read.csv, header = TRUE)
+#------------------------------outdated method--------------------------------
+#files <- list.files(path = "tabfolder", pattern = "*.tab", full.names = TRUE)
+#allfiles.list <- lapply(files, read.csv, header = TRUE)
 
-for (i in 1:14){
-  allfiles.list[[i]]$year <- 2005 + i
-
-}
-
-df <- do.call(rbind, allfiles.list)
+#for (i in 1:14){
+#  allfiles.list[[i]]$year <- 2005 + i
+#
+#}
+#
+#df <- do.call(rbind, allfiles.list)
+#
+###-------------------------------Purrr Method -------------------------------
+df <- list.files(path = "tabfolder", pattern = "*.tab", full.names = TRUE) %>% 
+  map_dfr(fread, header = TRUE, .id = "year") %>% mutate(year = as.integer(year) + 2005)
 ```
 
 ```{r intro-visualization}
