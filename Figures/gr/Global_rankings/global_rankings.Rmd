@@ -91,7 +91,7 @@ bin.subset$group <- cut(bin.subset$ranking,
                         right = FALSE,
                         labels = labels)
 #creating a grouping id
-id.var <- bin.subset[c("country", "group")]
+id.var <- bin.subset %>% select(c(group, country))
 grouping.df <- merge(df, id.var, by = "country")
 
 #subsetting by given group
@@ -218,7 +218,7 @@ subset.70.80.anim <- subset.70.80 %>%
   transition_states(states = country, state_length = 10)
 
 subset.80.90.anim <- subset.80.90 %>%
-  ggplot(aes(x = year, y = ranking, color = country, group = country)) + 
+  ggplot(aes(x = year, y = ranking, color = country,  group = country)) + 
   #geom_point(size = 6, alpha = .5) +
   geom_line()+
   labs(title = "Change of Ranking from 2006 (2006: (80-90] )", subtitle = "{closest_state}", y = "Ranking", x = "Year", col = "Country") + 
@@ -268,6 +268,5 @@ anim_save("70-80-Rankings.gif")
 
 animate(subset.80.90.anim, duration = 20, fps = 30, width = 2000, height = 2000, res = 300, renderer = gifski_renderer(loop = T))
 anim_save("80-90-Rankings.gif")
-
 ```
 
